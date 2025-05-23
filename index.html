@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nova.AI - ChatBot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap" rel="stylesheet"/>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .header {
+      padding: 1rem;
+      text-align: center;
+      background-color: #111;
+      color: #00ffe5;
+      font-size: 1.8rem;
+      border-bottom: 1px solid #00ffe5;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      background: rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
+      scroll-behavior: smooth;
+    }
+    .message {
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      border-radius: 10px;
+      max-width: 90%;
+      word-break: break-word;
+    }
+    .user {
+      background: #005aff;
+      color: white;
+      align-self: flex-end;
+    }
+    .bot {
+      background: rgba(255,255,255,0.1);
+      color: #00ffe5;
+      align-self: flex-start;
+    }
+    .input-area {
+      display: flex;
+      border-top: 1px solid #00ffe5;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 1rem;
+      font-size: 1rem;
+      background: #111;
+      color: white;
+      border: none;
+    }
+    .send-btn {
+      padding: 1rem;
+      background: #00ffe5;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .footer {
+      background-color: #000;
+      color: #ccc;
+      text-align: center;
+      padding: 0.75rem;
+      font-size: 0.8rem;
+      border-top: 1px solid #00ffe5;
+    }
+    @media (max-width: 600px) {
+      .header { font-size: 1.4rem; }
+      .message { font-size: 0.9rem; }
+      .input-area input, .send-btn { font-size: 0.9rem; padding: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">Nova.AI</div>
+    <div class="messages" id="messages"></div>
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Type a message..." />
+      <button class="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+    <div class="footer">Made with ❤️‍🩹 by MD SALMAN from Bangladesh</div>
+  </div>
+
+  <script>
+    const apiKey = "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";
+
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const messageText = input.value.trim();
+      if (!messageText) return;
+
+      appendMessage("user", messageText);
+      input.value = "";
+
+      if (messageText.toLowerCase().includes("who are you")) {
+        appendMessage("bot", "I'm Nova.AI — an AI model by MD SALMAN ❤️‍🩹 made in Bangladesh.");
+        return;
+      }
+
+      if (messageText.toLowerCase().startsWith("image ") || messageText.toLowerCase().startsWith("draw ")) {
+        generateImage(messageText.replace(/^(image|draw)\s+/i, ''));
+        return;
+      }
+
+      try {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: messageText }]
+          })
+        });
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content || "Nova couldn't respond.";
+        appendMessage("bot", reply);
+      } catch (err) {
+        appendMessage("bot", "Error: Unable to contact Nova.");
+      }
+    }
+
+    function appendMessage(sender, text) {
+      const div = document.createElement("div");
+      div.className = `message ${sender}`;
+      div.textContent = text;
+      document.getElementById("messages").appendChild(div);
+      document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+    }
+
+    async function generateImage(prompt) {
+      appendMessage("bot", `Generating image for: "${prompt}"...`);
+      try {
+        const res = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            prompt,
+            n: 1,
+            size: "512x512"
+          })
+        });
+        const data = await res.json();
+        const imageUrl = data.data[0].url;
+
+        const container = document.createElement("div");
+        container.className = "message bot";
+        container.innerHTML = `<img src="${imageUrl}" alt="Generated Image" style="max-width:100%;border-radius:8px;margin-top:5px;">
+          <a href="${imageUrl}" download="nova-image.png" class="send-btn" style="display:inline-block;margin-top:5px;">Download</a>`;
+        document.getElementById("messages").appendChild(container);
+        document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+      } catch {
+        appendMessage("bot", "Image generation failed.");
+      }
+    }
+  </script>
+</body>
+</html>     <p>Enjoy blazing fast performance and strong user privacy protection.</p>    </div>  </section>  <section class="screenshots">    <img src="https://files.catbox.moe/pkpyyx.png" alt="Screenshot 1">    <img src="https://files.catbox.moe/56nr4j.png" alt="Screenshot 2">    <img src="https://files.catbox.moe/zgdlo3.png" alt="Screenshot 3">  </section>  <footer>    Created by MD SALMAN ❤️‍🩹  </footer>  <!-- Floating Buttons -->  <div class="floating-btn">    <a href="https://www.facebook.com/mdsalman.013" target="_blank">      <img src="https://files.catbox.moe/w4yle5.jpg" alt="Facebook">    </a>    <a href="https://t.me/Otakuosenpai" target="_blank">      <img src="https://files.catbox.moe/mlcr56.jpg" alt="Telegram">    </a>    <a href="https://wa.me/8801840933137" target="_blank">      <img src="https://files.catbox.moe/gqz95a.jpg" alt="WhatsApp">    </a>  </div>  <script>    function toggleSocial() {      const popup = document.getElementById('socialPopup');      popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';    }  </script></body></html>
